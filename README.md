@@ -35,7 +35,7 @@ pip install ai-helper-agent
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/ai-helper-agent.git
+git clone https://github.com/AIMLDev726/ai-helper-agent.git
 cd ai-helper-agent
 
 # Install production dependencies
@@ -407,7 +407,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ai-helper-agent.git
+git clone https://github.com/AIMLDev726/ai-helper-agent.git
 cd ai-helper-agent
 
 # Install development dependencies
@@ -435,9 +435,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 📧 Email: support@example.com
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/ai-helper-agent/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/yourusername/ai-helper-agent/discussions)
+- 📧 Email: aistudentlearn4@gmail.com
+- 🐛 Issues: [GitHub Issues](https://github.com/AIMLDev726/ai-helper-agent/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/AIMLDev726/ai-helper-agent/discussions)
 
 ## 🗺️ Roadmap
 
