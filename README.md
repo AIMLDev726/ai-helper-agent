@@ -6,6 +6,16 @@
 
 An interactive AI assistant for code analysis, bug fixing, and development automation. Powered by advanced language models to provide intelligent code assistance.
 
+
+> **⚠️ Caution:**  
+> This tool is currently in **beta** and under **active development**. At the moment, only the **GROQ provider** is supported for CLI-based usage.  
+> Support for additional LLM providers will be added in the near future.  
+>  
+> To use the tool, generate a GROQ API key from:  
+> [https://groq.com/](https://groq.com/)  
+> [https://console.groq.com/docs/overview](https://console.groq.com/docs/overview)
+
+
 ## 🚀 Features
 
 - **🔧 Code Analysis & Bug Fixing**: Analyze Python, JavaScript, TypeScript, and other code languages
