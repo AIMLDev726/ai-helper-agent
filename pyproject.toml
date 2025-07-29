@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-helper-agent"
-version = "1.0.0"
+version = "1.0.1"
 description = "Interactive AI Helper Agent for code assistance, analysis, and bug fixing"
 readme = "README.md"
 license = {file = "LICENSE"}
