@@ -219,8 +219,8 @@ class InternetSingleProviderCLI:
 - I provide up-to-date answers with web-sourced information
 - I can find examples, tutorials, and best practices from the web
 
-Current workspace: {self.workspace_path}
-Current model: {self.model} (GROQ)
+Current workspace: {str(self.workspace_path)}
+Current model: {self.model or 'Unknown'} (GROQ)
 Provider: GROQ (Lightning Fast) + Internet Access
 
 IMPORTANT: When you need current information, documentation, API changes, or solutions to specific problems, I will automatically search the internet to provide you with the most up-to-date and accurate information."""
@@ -230,7 +230,7 @@ IMPORTANT: When you need current information, documentation, API changes, or sol
             # Combine the enhanced prompt with internet access information
             return f"{enhanced_prompt}\n\n{base_prompt}"
         
-        return base_prompt.format(workspace_path=self.workspace_path, model=self.model)
+        return base_prompt
     
     def _search_and_enhance_response(self, user_input: str, context: str = "") -> Optional[str]:
         """Search the internet and return enhanced context if needed"""

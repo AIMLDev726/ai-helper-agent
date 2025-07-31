@@ -296,8 +296,8 @@ class MultiProviderCLI:
 - Review architecture and design patterns
 - Suggest improvements and best practices
 
-Current workspace: {self.workspace_path}
-Current model: {self.model} ({provider.upper()})
+Current workspace: {str(self.workspace_path)}
+Current model: {self.model or 'Unknown'} ({provider.upper()})
 Provider: {provider.upper()}
 
 I'm ready to help you with any programming task, from simple scripts to complex applications!"""

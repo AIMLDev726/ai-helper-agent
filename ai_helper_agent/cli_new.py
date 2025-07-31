@@ -272,8 +272,8 @@ RESPONSE GUIDELINES:
 6. Include error handling and edge cases
 7. Suggest testing strategies
 
-Current workspace: {self.workspace_path}
-Current model: {self.model}
+Current workspace: {str(self.workspace_path)}
+Current model: {self.model or 'Unknown'}
 
 I'm ready to help you with any programming task, from simple scripts to complex applications!"""
     

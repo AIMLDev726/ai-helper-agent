@@ -185,8 +185,8 @@ class SingleProviderCLI:
 - Provide step-by-step debugging guidance
 - Optimize code for better performance
 
-Current workspace: {self.workspace_path}
-Current model: {self.model} (GROQ)
+Current workspace: {str(self.workspace_path)}
+Current model: {self.model or 'Unknown'} (GROQ)
 Provider: GROQ (Lightning Fast)
 
 I'm ready to help you with any programming task with Groq's ultra-fast responses!"""

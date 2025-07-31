@@ -37,8 +37,8 @@ class AdvancedPromptEnhancer:
 👤 USER CONTEXT:
 - Current user: {self.username or 'Developer'}
 - Session time: {time_context}
-- Workspace: {self.workspace_path}
-- Active model: {self.model}
+- Workspace: {str(self.workspace_path)}
+- Active model: {self.model or 'Unknown'}
 - Workspace type: {workspace_context.get('type', 'Mixed')}
 - Primary languages: {', '.join(workspace_context.get('languages', ['Multiple']))}
 - Project scale: {workspace_context.get('scale', 'Unknown')}
@@ -255,7 +255,7 @@ I'm ready to provide intelligent, context-aware programming assistance that goes
 
 Context Enhancement:
 - This request is part of an ongoing development session
-- User is working in workspace: {self.workspace_path}
+- User is working in workspace: {str(self.workspace_path)}
 - Previous context should be considered for consistency
 - Provide production-ready, not placeholder code
 - Include comprehensive explanations and reasoning
