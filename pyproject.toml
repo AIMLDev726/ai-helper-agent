@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-helper-agent"
-version = "1.0.1"
+version = "1.0.3"
 description = "Interactive AI Helper Agent for code assistance, analysis, and bug fixing"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
 authors = [
     {name = "AIStudent", email = "aistudentlearn4@gmail.com"}
 ]
@@ -20,7 +20,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: Quality Assurance",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -32,17 +31,34 @@ classifiers = [
 requires-python = ">=3.8"
 dependencies = [
     "langchain-groq>=0.1.0",
+    "langchain-anthropic>=0.1.0",
+    "langchain-google-genai>=0.1.0",
+    "langchain-openai>=0.1.0",
+    "langchain-ollama>=0.1.0",
     "langchain>=0.1.0",
     "langchain-community>=0.1.0",
     "langchain-core>=0.1.0",
     "structlog>=23.0.0",
-    "pathlib2; python_version<'3.4'"
+    "rich>=13.0.0",
+    "pathlib2; python_version<'3.4'",
+    "faiss-cpu>=1.7.0",
+    "chromadb>=0.4.0",
+    "cryptography>=3.4.0",
+    "sqlalchemy>=1.4.0"
 ]
 
 [project.scripts]
-ai-helper = "ai_helper_agent.cli:main"
-ai-helper-agent = "ai_helper_agent.cli:main"
-ai_helper_agent = "ai_helper_agent.cli:main"
+# Multi-provider CLI (default)
+ai-helper = "ai_helper_agent.cli_multi_provider:main"
+ai-helper-multi = "ai_helper_agent.cli_multi_provider:main"
+ai-helper-agent = "ai_helper_agent.cli_multi_provider:main"
+
+# Single provider CLI (Groq only)
+ai-helper-single = "ai_helper_agent.cli_single:main"
+ai-helper-groq = "ai_helper_agent.cli_single:main"
+
+# Legacy compatibility
+ai_helper_agent = "ai_helper_agent.cli_multi_provider:main"
 
 [project.optional-dependencies]
 dev = [

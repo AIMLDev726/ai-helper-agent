@@ -215,6 +215,21 @@ def extract_imports(code: str) -> List[str]:
         return []
 
 
+def get_user_data_dir() -> pathlib.Path:
+    """Get user data directory for AI Helper Agent"""
+    import os
+    
+    # Use Windows user directory
+    if os.name == 'nt':
+        base_dir = pathlib.Path.home()
+    else:
+        base_dir = pathlib.Path.home()
+    
+    user_data_dir = base_dir / ".ai_helper_agent"
+    user_data_dir.mkdir(exist_ok=True)
+    return user_data_dir
+
+
 def format_code_output(result: Dict[str, Any]) -> str:
     """Format code execution output for display"""
     if result["success"]:
