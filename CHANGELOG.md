@@ -10,6 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial development setup
 
+## [1.1.0] - 2025-01-31
+
+### Added
+- **Internet Access Feature**: New `ai-helper-internet-single` CLI with automatic web search
+- Smart query analysis that determines when internet search is needed
+- Multiple search providers support (DuckDuckGo, Google)
+- Permission control system with multiple levels (smart, always, ask, never)
+- Real-time web search integration with Groq models
+- Enhanced system prompts for internet-aware AI assistance
+- New dependencies: requests, beautifulsoup4, duckduckgo-search, googlesearch-python
+
+### Enhanced
+- Updated README with internet access examples and documentation
+- Improved package description to include internet access capabilities
+- Enhanced CLI help system with internet commands
+
+### Changed
+- Version bumped from 1.0.3 to 1.1.0 for new major feature
+- Package description updated to reflect internet access capabilities
+
 ## [1.0.0] - 2025-01-29
 
 ### Added

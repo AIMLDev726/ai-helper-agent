@@ -24,6 +24,13 @@ A comprehensive AI-powered programming assistant with advanced code generation, 
 - **Custom Models**: Support for custom model selection per provider
 - **Streaming Responses**: Real-time response streaming for better UX
 
+### 🌐 Internet-Enabled AI Assistant
+- **Real-time Web Search**: Automatically searches the web when current information is needed
+- **Smart Search Decision**: AI decides when internet search would be helpful
+- **Multiple Search Providers**: DuckDuckGo, Google, and custom search engines
+- **Permission Control**: Configure when and how internet access is used
+- **Up-to-date Information**: Get latest documentation, tutorials, and solutions
+
 ### 🤖 Latest AI Models
 - **Groq**: Llama 3.1, Llama 3.3, Gemma 2, Mixtral
 - **OpenAI**: GPT-4, GPT-4 Turbo, GPT-3.5 Turbo
@@ -47,6 +54,9 @@ ai-helper
 
 # Use specific provider CLI
 ai-helper-single  # Groq only
+
+# Use internet-enabled CLI (NEW!)
+ai-helper-internet-single  # Groq + Web search
 ```
 
 ### Python API
@@ -70,6 +80,7 @@ The package provides several CLI entry points:
 - `ai-helper-multi` - Multi-provider CLI (alias)
 - `ai-helper-single` - Single provider CLI (Groq only)
 - `ai-helper-groq` - Groq-specific CLI (alias)
+- `ai-helper-internet-single` - **NEW!** Internet-enabled single CLI with web search
 
 ## Configuration
 
@@ -171,6 +182,51 @@ response = agent.process_request("Analyze the code in myfile.py")
 # Get optimization suggestions
 response = agent.process_request("Optimize the performance of myfile.py")
 ```
+
+## Internet-Enabled Features
+
+### Using the Internet CLI
+
+```bash
+# Start internet-enabled CLI
+ai-helper-internet-single
+
+# The AI will automatically search when needed
+> "What's the latest version of Python?"
+🔍 Found relevant information online, incorporating into response...
+🤖 AI Helper: The latest version of Python is 3.12.1 (as of December 2023)...
+
+# Manual internet commands
+> "internet search latest React features"
+> "internet permission smart"  # Set smart search mode
+> "internet"  # Show status
+```
+
+### Internet Search Examples
+
+```
+# Current information queries
+> "What are the new features in Django 5.0?"
+> "How to use the latest OpenAI API?"
+> "What's the current best practice for async Python?"
+
+# Documentation and tutorials
+> "Show me examples of using FastAPI with async database"
+> "How to deploy Next.js app to Vercel in 2024?"
+> "Latest TypeScript features and examples"
+
+# Error solutions
+> "How to fix 'ModuleNotFoundError: No module named tensorflow'"
+> "React useEffect dependency array warnings solutions"
+> "Python asyncio event loop error fixes"
+```
+
+### Permission Levels
+
+- **Smart** (Default): AI decides when to search automatically
+- **Always**: Search the web for every query
+- **Ask**: Prompt user before each search
+- **Never**: Disable internet access
 
 ## Development
 

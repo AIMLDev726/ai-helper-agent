@@ -28,7 +28,7 @@ from .config import config
 from .cli import AIHelperCLI, main
 from .security import security_manager
 
-__version__ = "1.0.3"
+__version__ = "1.1.0"
 __author__ = "AIMLDev726"
 __email__ = "aistudentlearn4@gmail.com"
 
