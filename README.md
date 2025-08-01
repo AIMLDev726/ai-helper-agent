@@ -2,7 +2,7 @@
 
 ![PyPI](https://img.shields.io/pypi/v/ai-helper-agent)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Proprietary](https://img.shields.io/badge/license-proprietary-red)](LICENSE)
 
 A comprehensive AI-powered programming assistant with advanced code generation, analysis, debugging, and optimization capabilities using multiple LLM providers including Groq, OpenAI, Anthropic, Google, and Ollama.
 
