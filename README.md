@@ -1,8 +1,8 @@
 # AI Helper Agent
 
-[![PyPI version](https://badge.fury.io/py/ai-helper-agent.svg)](https://badge.fury.io/py/ai-helper-agent)
+![PyPI](https://img.shields.io/pypi/v/ai-helper-agent)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Proprietary](https://img.shields.io/badge/license-proprietary-red)](LICENSE)
 
 A comprehensive AI-powered programming assistant with advanced code generation, analysis, debugging, and optimization capabilities using multiple LLM providers including Groq, OpenAI, Anthropic, Google, and Ollama.
 
@@ -250,6 +250,18 @@ pip install -e ".[dev]"
 pytest tests/
 ```
 
+### Images
+
+1. **ai-helper-agent --help**
+
+<img width="1000" height="800" alt="image" src="https://github.com/user-attachments/assets/02fe8234-2291-4fc1-a348-b84050f3f8f6" />
+
+
+2. **ai-helper-selector --list**
+
+<img width="1000" height="800" alt="image" src="https://github.com/user-attachments/assets/f69d61b2-5327-46a4-96da-13f01be7bbc7" />
+
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -267,5 +279,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Inspired by GitHub Copilot and similar AI coding assistants
 
 ---
+
+🚫 This project is proprietary and protected by copyright.  
+🛒 You must purchase a license for personal or commercial use.  
+📩 Contact aistudentlearn4@gmail.com for licensing and permission.
 
 **Made with ❤️ by AIMLDev726**
