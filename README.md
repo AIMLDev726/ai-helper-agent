@@ -280,4 +280,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
+🚫 This project is proprietary and protected by copyright.  
+🛒 You must purchase a license for personal or commercial use.  
+📩 Contact aistudentlearn4@gmail.com for licensing and permission.
+
 **Made with ❤️ by AIMLDev726**
