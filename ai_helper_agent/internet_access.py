@@ -210,12 +210,62 @@ Examples:
             ])
             
             # Parse JSON response
-            result = json.loads(response.content)
+            content = response.content.strip()
+            if not content:
+                logger.warning("Empty response from LLM analysis")
+                return {
+                    'needs_search': True,
+                    'confidence': 0.5,
+                    'category': 'general',
+                    'reasoning': 'Empty LLM response, defaulting to search'
+                }
+            
+            # Try to extract JSON from response if it's wrapped in markdown
+            if content.startswith('```'):
+                # Extract JSON from code block
+                lines = content.split('\n')
+                json_lines = []
+                in_json = False
+                for line in lines:
+                    if line.strip().startswith('```'):
+                        in_json = not in_json
+                        continue
+                    if in_json:
+                        json_lines.append(line)
+                content = '\n'.join(json_lines)
+            
+            result = json.loads(content)
+            
+            # Validate required fields
+            required_fields = ['needs_search', 'confidence', 'category', 'reasoning']
+            for field in required_fields:
+                if field not in result:
+                    logger.warning(f"Missing field '{field}' in LLM response")
+                    result[field] = {
+                        'needs_search': True,
+                        'confidence': 0.5,
+                        'category': 'general',
+                        'reasoning': f'Missing {field} in LLM response'
+                    }[field]
+            
             return result
             
+        except json.JSONDecodeError as e:
+            logger.error("Failed to parse LLM JSON response", error=str(e), content=content[:200])
+            return {
+                'needs_search': True,
+                'confidence': 0.5,
+                'category': 'general',
+                'reasoning': 'JSON parsing failed, defaulting to search'
+            }
         except Exception as e:
             logger.error("LLM query analysis failed", error=str(e))
-            return {}
+            return {
+                'needs_search': True,
+                'confidence': 0.5,
+                'category': 'general',
+                'reasoning': 'LLM analysis failed, defaulting to search'
+            }
     
     def _determine_priority(self, analysis: Dict[str, Any]) -> str:
         """Determine priority level based on analysis"""
@@ -599,28 +649,34 @@ class PermissionManager:
         try:
             analysis = self.query_analyzer.analyze_query(request.query, request.context)
             
+            # Get category safely with default
+            category = analysis.get('category', 'unknown')
+            needs_search = analysis.get('needs_search', False)
+            confidence = analysis.get('confidence', 0.0)
+            
             # Auto-approve if category is in auto-approve list
-            if analysis['category'] in self.auto_approve_categories:
+            if category in self.auto_approve_categories:
                 self._log_request(request, True, auto_approved=True,
-                                reasoning=f"Auto-approved category: {analysis['category']}")
+                                reasoning=f"Auto-approved category: {category}")
                 return True
             
             # Auto-approve high-confidence technical queries
-            if (analysis['needs_search'] and 
-                analysis['confidence'] > 0.8 and 
-                analysis['category'] in ['technical', 'programming', 'troubleshooting']):
+            if (needs_search and 
+                confidence > 0.8 and 
+                category in ['technical', 'programming', 'troubleshooting']):
                 self._log_request(request, True, auto_approved=True,
-                                reasoning=f"High-confidence {analysis['category']} query")
+                                reasoning=f"High-confidence {category} query")
                 return True
             
             # Ask user for medium-confidence queries
-            if analysis['needs_search'] and analysis['confidence'] > 0.5:
-                print(f"\n🤖 AI Analysis: {analysis['reasoning']}")
+            if needs_search and confidence > 0.5:
+                reasoning = analysis.get('reasoning', 'Query analysis suggests internet search needed')
+                print(f"\n🤖 AI Analysis: {reasoning}")
                 return self._ask_user_permission(request)
             
             # Deny low-confidence queries
             self._log_request(request, False, auto_approved=True,
-                            reasoning=f"Low-confidence query (score: {analysis['confidence']:.1%})")
+                            reasoning=f"Low-confidence query (score: {confidence:.1%})")
             return False
             
         except Exception as e:

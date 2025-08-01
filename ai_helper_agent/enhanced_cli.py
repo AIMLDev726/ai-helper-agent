@@ -8,8 +8,19 @@ import sys
 import asyncio
 import time
 import getpass
+import re
+import warnings
+import argparse
 from typing import Dict, Any, Optional, List
 from pathlib import Path
+from datetime import datetime
+
+# Filter out warnings to keep CLI clean
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", message=".*ffmpeg.*")
+warnings.filterwarnings("ignore", message=".*avconv.*")
+warnings.filterwarnings("ignore", message=".*Couldn't find ffmpeg or avconv.*")
+warnings.filterwarnings("ignore", module="pydub")
 
 # Multi-provider LLM imports
 from langchain_groq import ChatGroq
@@ -51,6 +62,17 @@ from .streaming import StreamingResponseHandler, AdvancedStreamingHandler, Custo
 from .multi_provider_startup import MultiProviderStartup
 from .file_handler import file_handler
 
+# Import our managers
+try:
+    from .api_key_manager import api_key_manager
+    from .conversation_manager import conversation_manager, MessageRole
+    from .rich_formatting import rich_formatter
+except ImportError:
+    # Fallback for direct execution
+    from api_key_manager import api_key_manager
+    from conversation_manager import conversation_manager, MessageRole
+    from rich_formatting import rich_formatter
+
 # Global conversation store
 conversation_store: Dict[str, BaseChatMessageHistory] = {}
 
@@ -59,7 +81,7 @@ class EnhancedMultiProviderCLI:
     """Enhanced CLI with file input, thinking indicator, and fixed display issues"""
     
     def __init__(self, session_id: str = "default", model: str = None, skip_startup: bool = False):
-        self.session_id = session_id
+        self.session_id = f"enhanced_cli_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.model = model or "llama-3.1-8b-instant"
         self.provider = "groq"
         self.api_key = None
@@ -68,21 +90,32 @@ class EnhancedMultiProviderCLI:
         self.skip_startup = skip_startup
         self.workspace_path = Path(".")
         
-        # Initialize components
-        self.user_manager = user_manager
-        self.security_manager = security_manager
-        self.system_config = SystemConfigurationManager()
-        self.prompt_enhancer = AdvancedPromptEnhancer(workspace_path=self.workspace_path)
+        # Check if we're in help mode (avoid heavy initialization)
+        self.help_mode = '--help' in sys.argv or '-h' in sys.argv
         
-        # Streaming components
-        self.streaming_handler: Optional[StreamingResponseHandler] = None
-        self.advanced_streaming: Optional[AdvancedStreamingHandler] = None
-        self.enhanced_streaming: Optional[EnhancedStreamingHandler] = None
-        self.streaming_enabled = True
-        
-        # Multi-provider startup interface
-        if not self.skip_startup:
-            self.startup_interface = MultiProviderStartup()
+        # Initialize components (only if not in help mode)
+        if not self.help_mode:
+            self.user_manager = user_manager
+            self.security_manager = security_manager
+            self.system_config = SystemConfigurationManager()
+            self.prompt_enhancer = AdvancedPromptEnhancer(workspace_path=self.workspace_path)
+            self.conversation_manager = conversation_manager
+            self.rich_formatter = rich_formatter
+            
+            # Streaming components
+            self.streaming_handler: Optional[StreamingResponseHandler] = None
+            self.advanced_streaming: Optional[AdvancedStreamingHandler] = None
+            self.enhanced_streaming: Optional[EnhancedStreamingHandler] = None
+            
+            # Configure Rich formatter (only when not in help mode)
+            self.streaming_enabled = True
+            
+            # Multi-provider startup interface
+            if not self.skip_startup:
+                self.startup_interface = MultiProviderStartup()
+        else:
+            # Minimal initialization for help mode
+            self.rich_formatter = rich_formatter
         
         # File processing state
         self.current_files: Dict[str, Any] = {}
@@ -108,6 +141,10 @@ class EnhancedMultiProviderCLI:
     
     def setup_user_session(self) -> bool:
         """Setup user session with startup interface"""
+        # Skip setup in help mode
+        if hasattr(self, 'help_mode') and self.help_mode:
+            return True
+            
         try:
             if not self.skip_startup and hasattr(self, 'startup_interface'):
                 # Use multi-provider startup interface
@@ -666,9 +703,86 @@ class MultiProviderCLI(EnhancedMultiProviderCLI):
 
 
 def main():
-    """Main entry point"""
-    cli = EnhancedMultiProviderCLI()
-    asyncio.run(cli.start())
+    """Main entry point with argument parsing"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description="AI Helper Agent - Enhanced Multi-Provider CLI",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  ai-helper-enhanced                      # Start with provider selection
+  ai-helper-enhanced --quick             # Skip startup, use existing config
+  ai-helper-enhanced --session work     # Start with named session
+  ai-helper-enhanced --model llama       # Start with specific model
+        """
+    )
+    
+    parser.add_argument(
+        "--session", "-s",
+        default="default",
+        help="Session ID for conversation history"
+    )
+    
+    parser.add_argument(
+        "--model", "-m",
+        help="Model to use with the selected provider"
+    )
+    
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        help="Skip startup interface and use existing configuration"
+    )
+    
+    parser.add_argument(
+        "--workspace", "-w",
+        default=".",
+        help="Workspace directory path"
+    )
+    
+    parser.add_argument(
+        "--version", "-v",
+        action="version",
+        version="AI Helper Agent Enhanced CLI v2.0"
+    )
+    
+    args = parser.parse_args()
+    
+    try:
+        # Create CLI instance
+        cli = EnhancedMultiProviderCLI(
+            session_id=args.session,
+            model=args.model,
+            skip_startup=args.quick
+        )
+        
+        # Set workspace
+        workspace_path = Path(args.workspace).resolve()
+        if workspace_path.exists():
+            cli.workspace_path = workspace_path
+        else:
+            print(f"⚠️ Workspace path doesn't exist: {workspace_path}")
+            cli.workspace_path = Path.cwd()
+        
+        # Initialize Rich formatter here (after argument parsing)
+        if rich_formatter.is_available():
+            rich_formatter.print_status("✅ Using Rich for enhanced display", "success")
+        else:
+            print("⚠️ Rich not available - using basic display")
+        
+        # Start the application
+        asyncio.run(cli.start())
+        
+    except KeyboardInterrupt:
+        if rich_formatter.is_available():
+            rich_formatter.print_goodbye()
+        else:
+            print("\n👋 Goodbye!")
+        sys.exit(0)
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
