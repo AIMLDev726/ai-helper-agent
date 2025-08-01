@@ -252,12 +252,12 @@ pytest tests/
 
 ### Images
 
-1. ai-helper-agent --help
+1. **ai-helper-agent --help**
 
 <img width="1353" height="913" alt="image" src="https://github.com/user-attachments/assets/02fe8234-2291-4fc1-a348-b84050f3f8f6" />
 
 
-2. ai-helper-selector --list
+2. **ai-helper-selector --list**
 
 <img width="1904" height="689" alt="image" src="https://github.com/user-attachments/assets/f69d61b2-5327-46a4-96da-13f01be7bbc7" />
 
