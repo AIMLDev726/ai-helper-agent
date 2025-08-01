@@ -25,10 +25,15 @@ except ImportError:
     GOOGLE_SEARCH_AVAILABLE = False
 
 try:
-    from duckduckgo_search import DDGS
+    from ddgs import DDGS
     DDGS_AVAILABLE = True
 except ImportError:
-    DDGS_AVAILABLE = False
+    try:
+        # Fallback to old package name for backward compatibility
+        from duckduckgo_search import DDGS
+        DDGS_AVAILABLE = True
+    except ImportError:
+        DDGS_AVAILABLE = False
 
 try:
     import requests
@@ -293,23 +298,32 @@ class WebSearchManager:
         return []
     
     def _search_duckduckgo(self, query: str, max_results: int) -> List[SearchResult]:
-        """Search using DuckDuckGo"""
+        """Search using DuckDuckGo with new ddgs package"""
         if not DDGS_AVAILABLE:
-            raise ImportError("DuckDuckGo search not available")
+            raise ImportError("DuckDuckGo search not available - install with: pip install ddgs")
         
         results = []
         try:
-            with DDGS() as ddgs:
-                ddg_results = ddgs.text(query, max_results=max_results)
-                
+            ddgs = DDGS()
+            ddg_results = ddgs.text(query, max_results=max_results, region="us-en", backend="auto")
+            
+            # Handle both list and generator results
+            if hasattr(ddg_results, '__iter__'):
                 for result in ddg_results:
-                    search_result = SearchResult(
-                        title=result.get('title', ''),
-                        url=result.get('href', ''),
-                        snippet=result.get('body', ''),
-                        provider='duckduckgo'
-                    )
-                    results.append(search_result)
+                    if isinstance(result, dict):
+                        search_result = SearchResult(
+                            title=result.get('title', ''),
+                            url=result.get('href', '') or result.get('url', ''),
+                            snippet=result.get('body', '') or result.get('description', ''),
+                            provider='duckduckgo'
+                        )
+                        results.append(search_result)
+                        
+                        # Limit results to max_results
+                        if len(results) >= max_results:
+                            break
+            
+            logger.info("Search completed successfully", provider="duckduckgo", results_count=len(results))
         
         except Exception as e:
             logger.error("DuckDuckGo search failed", error=str(e))
@@ -318,38 +332,50 @@ class WebSearchManager:
         return results
     
     def _search_google(self, query: str, max_results: int) -> List[SearchResult]:
-        """Search using Google"""
+        """Search using Google with enhanced googlesearch-python"""
         if not GOOGLE_SEARCH_AVAILABLE:
-            raise ImportError("Google search not available")
+            raise ImportError("Google search not available - install with: pip install googlesearch-python")
         
         results = []
         try:
-            # Get URLs from google search
-            urls = list(google_search(query, num_results=max_results))
+            # Use googlesearch-python with advanced features
+            search_results = google_search(
+                query,
+                num_results=max_results,
+                advanced=True,  # Get more detailed results
+                sleep_interval=1,  # Be respectful to Google
+                lang="en"
+            )
             
-            # For each URL, try to get title and snippet
-            for url in urls[:max_results]:
-                try:
-                    # Get page title and meta description
-                    title, snippet = self._get_page_metadata(url)
+            # Handle both generator and list results
+            count = 0
+            for result in search_results:
+                if count >= max_results:
+                    break
                     
+                if hasattr(result, 'title'):
+                    # Advanced search result object
+                    search_result = SearchResult(
+                        title=result.title or "",
+                        url=result.url or "",
+                        snippet=result.description or "",
+                        provider='google'
+                    )
+                else:
+                    # Simple URL string result
+                    url = str(result)
+                    title, snippet = self._get_page_metadata(url)
                     search_result = SearchResult(
                         title=title or url,
                         url=url,
                         snippet=snippet or "",
                         provider='google'
                     )
-                    results.append(search_result)
-                    
-                except Exception as e:
-                    # If we can't get metadata, still include the URL
-                    search_result = SearchResult(
-                        title=url,
-                        url=url,
-                        snippet="",
-                        provider='google'
-                    )
-                    results.append(search_result)
+                
+                results.append(search_result)
+                count += 1
+            
+            logger.info("Search completed successfully", provider="google", results_count=len(results))
         
         except Exception as e:
             logger.error("Google search failed", error=str(e))

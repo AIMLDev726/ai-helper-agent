@@ -66,46 +66,17 @@ class UserSessionManager:
         self._init_embeddings()
     
     def _init_embeddings(self):
-        """Initialize embeddings for vector storage using Ollama - with fast fallback"""
-        try:
-            # Skip embeddings initialization entirely for faster startup
-            self.embeddings = None
-            print("⚡ Skipping embeddings initialization for faster startup")
-            print("💡 Vector search features will be disabled")
-            return
-            
-            # Alternative: Use Ollama embeddings instead of HuggingFace
-            if OLLAMA_EMBEDDINGS_AVAILABLE:
-                try:
-                    self.embeddings = OllamaEmbeddings(
-                        model="all-minilm",
-                        base_url="http://localhost:11434"
-                    )
-                    print("✅ Ollama embeddings initialized successfully")
-                    return
-                except Exception as e:
-                    print(f"⚠️ Ollama embeddings failed: {e}")
-            
-            # Fallback: No embeddings
-            self.embeddings = None
-            print("⚡ Using no embeddings for maximum startup speed")
-            
-        except Exception as e:
-            print(f"❌ Embeddings initialization error: {e}")
-            self.embeddings = None
-            
-            # Legacy code (commented out for performance)
-            # if OLLAMA_EMBEDDINGS_AVAILABLE and OllamaEmbeddings:
-            #     self.embeddings = OllamaEmbeddings(
-            #         model="all-minilm",
-            #         base_url="http://localhost:11434"
-            #     )
-            #     print("✅ Ollama embeddings initialized (all-minilm)")
-            # else:
-            #     print("Warning: OllamaEmbeddings not available - install langchain-ollama")
-            #     self.embeddings = None
-        except Exception as e:
-            print(f"Warning: Could not initialize embeddings: {e}")
+        """Initialize embeddings for vector operations"""
+        if OLLAMA_EMBEDDINGS_AVAILABLE:
+            try:
+                # Try Ollama first (local)
+                self.embeddings = OllamaEmbeddings(model="nomic-embed-text")
+                # print("✅ Using Ollama embeddings for vector operations")
+            except Exception as e:
+                # print(f"⚠️ Ollama embeddings failed: {e}")
+                self.embeddings = None
+        else:
+            print("⚠️ No embeddings available. Install ollama for local embeddings.")
             self.embeddings = None
     
     def get_user_directory(self, username: str) -> Path:
@@ -119,120 +90,104 @@ class UserSessionManager:
         user_dir.mkdir(parents=True, exist_ok=True)
         return user_dir
     
-    def generate_encryption_key(self, user_dir: Path) -> bytes:
-        """Generate or load encryption key for user"""
-        key_file = user_dir / '.secret_key'
-        
-        if key_file.exists():
-            with open(key_file, 'rb') as f:
-                return f.read()
-        else:
-            key = Fernet.generate_key()
-            with open(key_file, 'wb') as f:
-                f.write(key)
-            
-            # Hide the file on Windows
-            if os.name == 'nt':
-                try:
-                    import ctypes
-                    ctypes.windll.kernel32.SetFileAttributesW(str(key_file), 2)  # Hidden
-                except:
-                    pass
-            
-            return key
-    
-    def encrypt_data(self, data: str, key: bytes) -> str:
-        """Encrypt sensitive data"""
-        f = Fernet(key)
-        return base64.urlsafe_b64encode(f.encrypt(data.encode())).decode()
-    
-    def decrypt_data(self, encrypted_data: str, key: bytes) -> str:
-        """Decrypt sensitive data"""
-        f = Fernet(key)
-        return f.decrypt(base64.urlsafe_b64decode(encrypted_data.encode())).decode()
-    
     def init_user_database(self, user_dir: Path):
         """Initialize SQLite database for user"""
-        self.db_path = user_dir / 'sessions.db'
+        db_path = user_dir / 'user_data.db'
         
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
-        # Create tables
+        # Create tables for user information
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS user_info (
-                id INTEGER PRIMARY KEY,
-                username TEXT UNIQUE,
-                created_at TIMESTAMP,
-                last_login TIMESTAMP,
+                username TEXT PRIMARY KEY,
+                created_at TEXT,
+                last_login TEXT,
                 preferences TEXT
             )
         ''')
         
+        # Create table for chat sessions
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS sessions (
+            CREATE TABLE IF NOT EXISTS chat_sessions (
                 session_id TEXT PRIMARY KEY,
                 username TEXT,
-                created_at TIMESTAMP,
-                last_updated TIMESTAMP,
+                created_at TEXT,
+                updated_at TEXT,
                 session_data TEXT,
-                encrypted BOOLEAN DEFAULT 0
+                FOREIGN KEY (username) REFERENCES user_info (username)
             )
         ''')
         
+        # Create table for file interactions
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS conversation_history (
+            CREATE TABLE IF NOT EXISTS file_interactions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT,
                 session_id TEXT,
-                timestamp TIMESTAMP,
+                file_path TEXT,
+                action TEXT,
+                timestamp TEXT,
+                metadata TEXT,
+                FOREIGN KEY (username) REFERENCES user_info (username)
+            )
+        ''')
+        
+        # Create table for conversation history
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS conversations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT,
+                session_id TEXT,
                 role TEXT,
                 content TEXT,
+                timestamp TEXT,
                 metadata TEXT,
-                FOREIGN KEY (session_id) REFERENCES sessions (session_id)
+                FOREIGN KEY (username) REFERENCES user_info (username)
             )
         ''')
         
         conn.commit()
         conn.close()
     
-    def init_vector_store(self, user_dir: Path):
-        """Initialize vector store for user - DISABLED for faster startup"""
-        if not self.embeddings:
-            print("⚡ Skipping vector store initialization (embeddings disabled)")
-            return
-        
-        print("⚠️ Vector store initialization skipped for performance")
-        # Legacy vector store code disabled for faster startup
-        return
-    
     def setup_user(self, username: str, password: str = None) -> bool:
         """Setup user environment with secure caching"""
         try:
-            self.current_user = username
-            self.master_password = password
+            # Get user directory
             self.user_dir = self.get_user_directory(username)
+            self.current_user = username
+            self.session_id = str(uuid.uuid4())
+            self.db_path = self.user_dir / 'user_data.db'
+            
+            # Store master password for encryption
+            self.master_password = password
             
             # Initialize database
             self.init_user_database(self.user_dir)
             
-            # Initialize secure cache manager
-            try:
-                self.secure_cache = SecureCacheManager(self.user_dir, password)
-                print("✅ Secure cache system initialized")
-            except Exception as e:
-                print(f"⚠️  Warning: Secure cache initialization failed: {e}")
-                print("Falling back to standard caching...")
-            
-            # Initialize vector store (legacy fallback)
-            self.init_vector_store(self.user_dir)
-            
             # Save user info
             self.save_user_info(username)
             
-            # Generate new session
-            self.session_id = self.create_new_session()
+            # Initialize secure cache with user-specific directory
+            cache_dir = self.user_dir / "secure_cache"
+            cache_dir.mkdir(exist_ok=True)
             
-            print(f"✅ User environment setup complete for: {username}")
+            try:
+                self.secure_cache = SecureCacheManager(
+                    cache_dir=str(cache_dir),
+                    master_password=password
+                )
+                print("🔒 Secure cache initialized successfully")
+            except Exception as e:
+                print(f"⚠️ Secure cache initialization failed: {e}")
+                print("📍 Continuing without secure caching...")
+                self.secure_cache = None
+            
+            # Initialize vector store if embeddings are available
+            if self.embeddings:
+                self.init_vector_store()
+            
+            print(f"✅ User '{username}' initialized successfully")
             print(f"📁 User data stored in: {self.user_dir}")
             if self.secure_cache:
                 print(f"🔒 Secure caching enabled with encryption")
@@ -259,210 +214,156 @@ class UserSessionManager:
         conn.commit()
         conn.close()
     
-    def create_new_session(self) -> str:
-        """Create a new session"""
-        session_id = str(uuid.uuid4())
+    def init_vector_store(self):
+        """Initialize vector store for semantic search"""
+        if not self.embeddings:
+            return
         
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        vector_dir = self.user_dir / "vector_store"
+        vector_dir.mkdir(exist_ok=True)
         
-        now = datetime.now().isoformat()
-        
-        cursor.execute('''
-            INSERT INTO sessions 
-            (session_id, username, created_at, last_updated, session_data)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (session_id, self.current_user, now, now, json.dumps({})))
-        
-        conn.commit()
-        conn.close()
-        
-        return session_id
-    
-    def get_user_sessions(self, username: str) -> List[Dict]:
-        """Get all sessions for a user"""
-        if not self.db_path or not self.db_path.exists():
-            return []
-        
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT session_id, created_at, last_updated
-            FROM sessions 
-            WHERE username = ?
-            ORDER BY last_updated DESC
-        ''', (username,))
-        
-        sessions = []
-        for row in cursor.fetchall():
-            sessions.append({
-                'session_id': row[0],
-                'created_at': row[1],
-                'last_updated': row[2]
-            })
-        
-        conn.close()
-        return sessions
-    
-    def load_session(self, session_id: str) -> bool:
-        """Load an existing session"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            if FAISS_AVAILABLE:
+                # Try to load existing FAISS index
+                faiss_path = vector_dir / "faiss_index"
+                if faiss_path.exists():
+                    self.vector_store = LangchainFAISS.load_local(
+                        str(faiss_path), 
+                        self.embeddings,
+                        allow_dangerous_deserialization=True
+                    )
+                    print("✅ Loaded existing FAISS vector store")
+                else:
+                    # Create new FAISS index with dummy document
+                    from langchain.schema import Document
+                    dummy_doc = Document(page_content="Initialization document", metadata={"type": "init"})
+                    self.vector_store = LangchainFAISS.from_documents([dummy_doc], self.embeddings)
+                    self.vector_store.save_local(str(faiss_path))
+                    print("✅ Created new FAISS vector store")
             
-            cursor.execute('''
-                SELECT username, session_data
-                FROM sessions 
-                WHERE session_id = ?
-            ''', (session_id,))
-            
-            result = cursor.fetchone()
-            if result:
-                self.session_id = session_id
-                self.current_user = result[0]
-                
-                # Update last_updated
-                cursor.execute('''
-                    UPDATE sessions 
-                    SET last_updated = ?
-                    WHERE session_id = ?
-                ''', (datetime.now().isoformat(), session_id))
-                
-                conn.commit()
-                conn.close()
-                return True
-            
-            conn.close()
-            return False
+            elif CHROMADB_AVAILABLE and Chroma:
+                # Use ChromaDB as fallback
+                chroma_path = vector_dir / "chroma_db"
+                self.vector_store = Chroma(
+                    persist_directory=str(chroma_path),
+                    embedding_function=self.embeddings
+                )
+                print("✅ Initialized ChromaDB vector store")
             
         except Exception as e:
-            print(f"Error loading session: {e}")
-            return False
+            print(f"⚠️ Vector store initialization failed: {e}")
+            self.vector_store = None
     
-    def save_conversation(self, role: str, content: str, metadata: Dict = None):
-        """Save conversation with secure caching and legacy fallback"""
-        if not self.session_id:
+    def add_conversation(self, role: str, content: str, metadata: Dict = None):
+        """Add conversation to database and vector store"""
+        if not self.current_user or not self.session_id:
             return
         
         try:
-            # Use secure cache if available
-            if self.secure_cache:
-                success = self.secure_cache.cache_conversation(
-                    self.session_id, role, content, metadata
-                )
-                # Don't print cache messages to keep CLI clean
-                # if success:
-                #     print("🔒 Conversation securely cached")
-                # else:
-                #     print("⚠️  Secure caching failed, using legacy method")
-            
-            # Always save to database as backup/legacy
+            # Add to database
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
             cursor.execute('''
-                INSERT INTO conversation_history 
-                (session_id, timestamp, role, content, metadata)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO conversations 
+                (username, session_id, role, content, timestamp, metadata)
+                VALUES (?, ?, ?, ?, ?, ?)
             ''', (
-                self.session_id,
-                datetime.now().isoformat(),
+                self.current_user,
+                self.session_id, 
                 role,
                 content,
+                datetime.now().isoformat(),
                 json.dumps(metadata or {})
             ))
             
             conn.commit()
             conn.close()
             
-            # Save to legacy vector store if available
-            if self.vector_store and len(content.strip()) > 10:
-                doc_metadata = {
-                    "session_id": self.session_id,
-                    "role": role,
-                    "timestamp": datetime.now().isoformat(),
-                    "user": self.current_user,
-                    **(metadata or {})
-                }
+            # Add to vector store if available
+            if self.vector_store and len(content.strip()) > 10:  # Only index meaningful content
+                from langchain.schema import Document
+                doc = Document(
+                    page_content=content,
+                    metadata={
+                        "role": role,
+                        "session_id": self.session_id,
+                        "timestamp": datetime.now().isoformat(),
+                        **(metadata or {})
+                    }
+                )
                 
-                self.vector_store.add_texts([content], metadatas=[doc_metadata])
-                
-                # Save FAISS index if using FAISS
-                if isinstance(self.vector_store, LangchainFAISS):
-                    faiss_path = self.user_dir / 'vectors' / 'faiss_index'
-                    self.vector_store.save_local(str(faiss_path))
-        
+                if hasattr(self.vector_store, 'add_documents'):
+                    self.vector_store.add_documents([doc])
+                    
+                    # Save FAISS index if applicable
+                    if FAISS_AVAILABLE and isinstance(self.vector_store, LangchainFAISS):
+                        vector_dir = self.user_dir / "vector_store" / "faiss_index"
+                        self.vector_store.save_local(str(vector_dir))
+                        
         except Exception as e:
-            print(f"Warning: Could not save conversation: {e}")
+            print(f"⚠️ Error adding conversation: {e}")
     
     def search_conversations(self, query: str, limit: int = 5) -> List[Dict]:
-        """Search conversations using secure cache and legacy fallback"""
-        results = []
+        """Search conversations using vector similarity"""
+        if not self.vector_store:
+            return []
         
-        # Try secure cache first
-        if self.secure_cache:
-            try:
-                secure_results = self.secure_cache.search_conversations(
-                    query, self.session_id, limit
-                )
-                if secure_results:
-                    print(f"🔒 Found {len(secure_results)} results from secure cache")
-                    return secure_results
-            except Exception as e:
-                print(f"⚠️  Secure search failed: {e}")
-        
-        # Fallback to legacy vector store
-        if self.vector_store:
-            try:
-                vector_results = self.vector_store.similarity_search_with_score(query, k=limit)
-                
-                for doc, score in vector_results:
-                    results.append({
-                        'content': doc.page_content,
-                        'metadata': doc.metadata,
-                        'similarity_score': score
-                    })
-                
-                if results:
-                    print(f"📊 Found {len(results)} results from legacy vector store")
-                
-            except Exception as e:
-                print(f"Error searching conversations: {e}")
-        
-        return results
+        try:
+            results = self.vector_store.similarity_search(query, k=limit)
+            return [
+                {
+                    "content": doc.page_content,
+                    "metadata": doc.metadata,
+                    "score": getattr(doc, 'score', 0.0)
+                }
+                for doc in results
+            ]
+        except Exception as e:
+            print(f"⚠️ Vector search failed: {e}")
+            return []
     
-    def get_conversation_history(self, limit: int = 20) -> List[Dict]:
-        """Get recent conversation history"""
-        if not self.session_id:
+    def get_conversation_history(self, session_id: str = None, limit: int = 50) -> List[Dict]:
+        """Get conversation history from database"""
+        if not self.current_user:
             return []
         
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            cursor.execute('''
-                SELECT timestamp, role, content, metadata
-                FROM conversation_history 
-                WHERE session_id = ?
-                ORDER BY timestamp DESC
-                LIMIT ?
-            ''', (self.session_id, limit))
+            if session_id:
+                cursor.execute('''
+                    SELECT role, content, timestamp, metadata 
+                    FROM conversations 
+                    WHERE username = ? AND session_id = ?
+                    ORDER BY timestamp DESC 
+                    LIMIT ?
+                ''', (self.current_user, session_id, limit))
+            else:
+                cursor.execute('''
+                    SELECT role, content, timestamp, metadata 
+                    FROM conversations 
+                    WHERE username = ?
+                    ORDER BY timestamp DESC 
+                    LIMIT ?
+                ''', (self.current_user, limit))
             
-            history = []
-            for row in cursor.fetchall():
-                history.append({
-                    'timestamp': row[0],
-                    'role': row[1],
-                    'content': row[2],
-                    'metadata': json.loads(row[3] or '{}')
-                })
-            
+            rows = cursor.fetchall()
             conn.close()
-            return list(reversed(history))  # Return in chronological order
+            
+            return [
+                {
+                    "role": row[0],
+                    "content": row[1],
+                    "timestamp": row[2],
+                    "metadata": json.loads(row[3]) if row[3] else {}
+                }
+                for row in reversed(rows)  # Reverse to get chronological order
+            ]
             
         except Exception as e:
-            print(f"Error getting conversation history: {e}")
+            print(f"⚠️ Error retrieving conversation history: {e}")
             return []
     
     def change_username(self, new_username: str) -> bool:
@@ -484,32 +385,47 @@ class UserSessionManager:
             print(f"❌ Error changing username: {e}")
             return False
     
-    def cache_file_content(self, file_path: str, content: str, ttl_hours: int = 24) -> bool:
-        """Cache file content securely"""
-        if not self.secure_cache:
-            return False
+    def get_user_stats(self) -> Dict[str, Any]:
+        """Get user statistics"""
+        if not self.current_user or not self.db_path:
+            return {}
         
         try:
-            return self.secure_cache.cache_file_content(
-                file_path, content, ttl_seconds=ttl_hours*3600
-            )
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Get conversation count
+            cursor.execute('''
+                SELECT COUNT(*) FROM conversations WHERE username = ?
+            ''', (self.current_user,))
+            conversation_count = cursor.fetchone()[0]
+            
+            # Get session count
+            cursor.execute('''
+                SELECT COUNT(DISTINCT session_id) FROM conversations WHERE username = ?
+            ''', (self.current_user,))
+            session_count = cursor.fetchone()[0]
+            
+            # Get file interaction count
+            cursor.execute('''
+                SELECT COUNT(*) FROM file_interactions WHERE username = ?
+            ''', (self.current_user,))
+            file_interaction_count = cursor.fetchone()[0]
+            
+            conn.close()
+            
+            return {
+                "username": self.current_user,
+                "conversations": conversation_count,
+                "sessions": session_count,
+                "file_interactions": file_interaction_count,
+                "vector_store_available": self.vector_store is not None,
+                "secure_cache_available": self.secure_cache is not None,
+                "user_directory": str(self.user_dir) if self.user_dir else None
+            }
+            
         except Exception as e:
-            print(f"Error caching file: {e}")
-            return False
-    
-    def get_cached_file(self, file_path: str) -> Optional[str]:
-        """Get cached file content"""
-        if not self.secure_cache:
-            return None
-        
-        try:
-            cached_data = self.secure_cache.get_cached_file(file_path)
-            if cached_data:
-                return cached_data.get('content')
-            return None
-        except Exception as e:
-            print(f"Error retrieving cached file: {e}")
-            return None
+            return {"error": str(e)}
     
     def cleanup_cache(self) -> Dict[str, Any]:
         """Cleanup expired cache entries"""
@@ -524,16 +440,16 @@ class UserSessionManager:
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get comprehensive cache statistics"""
         stats = {
-            "user": self.current_user,
-            "session_id": self.session_id,
-            "user_dir": str(self.user_dir) if self.user_dir else None,
-            "secure_cache_enabled": self.secure_cache is not None
+            "secure_cache_available": self.secure_cache is not None,
+            "vector_store_available": self.vector_store is not None,
+            "embeddings_available": self.embeddings is not None
         }
         
+        # Add secure cache stats
         if self.secure_cache:
             try:
-                secure_stats = self.secure_cache.get_system_stats()
-                stats["secure_cache"] = secure_stats
+                cache_stats = self.secure_cache.get_stats()
+                stats.update(cache_stats)
             except Exception as e:
                 stats["secure_cache_error"] = str(e)
         
@@ -543,10 +459,10 @@ class UserSessionManager:
                 conn = sqlite3.connect(self.db_path)
                 cursor = conn.cursor()
                 
-                cursor.execute('SELECT COUNT(*) FROM conversation_history')
+                cursor.execute("SELECT COUNT(*) FROM conversations")
                 conversation_count = cursor.fetchone()[0]
                 
-                cursor.execute('SELECT COUNT(*) FROM sessions')
+                cursor.execute("SELECT COUNT(DISTINCT session_id) FROM conversations")
                 session_count = cursor.fetchone()[0]
                 
                 conn.close()
@@ -560,50 +476,6 @@ class UserSessionManager:
                 stats["database_error"] = str(e)
         
         return stats
-    
-    def export_encrypted_backup(self, backup_path: str = None) -> bool:
-        """Export encrypted backup of user data"""
-        if not self.secure_cache or not self.user_dir:
-            return False
-        
-        try:
-            import shutil
-            from datetime import datetime
-            
-            if not backup_path:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                backup_path = self.user_dir.parent / f"backup_{self.current_user}_{timestamp}.encrypted"
-            
-            # Create backup directory structure
-            backup_dir = Path(backup_path).with_suffix('.backup_temp')
-            backup_dir.mkdir(exist_ok=True)
-            
-            # Copy encrypted cache files
-            cache_dir = self.user_dir / ".cache"
-            if cache_dir.exists():
-                shutil.copytree(cache_dir, backup_dir / ".cache")
-            
-            # Copy encrypted secrets
-            secrets_dir = self.user_dir / ".secrets"
-            if secrets_dir.exists():
-                shutil.copytree(secrets_dir, backup_dir / ".secrets")
-            
-            # Copy database
-            if self.db_path and self.db_path.exists():
-                shutil.copy2(self.db_path, backup_dir / "sessions.db")
-            
-            # Create encrypted archive
-            shutil.make_archive(str(backup_path), 'zip', backup_dir)
-            
-            # Clean up temp directory
-            shutil.rmtree(backup_dir)
-            
-            print(f"✅ Encrypted backup created: {backup_path}.zip")
-            return True
-            
-        except Exception as e:
-            print(f"❌ Backup creation failed: {e}")
-            return False
 
 
 # Global user session manager

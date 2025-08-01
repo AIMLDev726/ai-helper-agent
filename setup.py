@@ -148,6 +148,10 @@ setup(
         "chromadb>=0.4.0",
         "cryptography>=3.4.0",
         "sqlalchemy>=1.4.0",
+        "ddgs>=0.9.0",
+        "googlesearch-python>=1.2.0",
+        "requests>=2.25.0",
+        "beautifulsoup4>=4.9.0",
     ],
     
     # Optional dependencies
@@ -160,6 +164,8 @@ setup(
             "ddgs>=0.9.0",
             "googlesearch-python>=1.2.0",
             "mcp>=0.1.0",
+            "g4f[all]",
+            "groq",
         ],
         "search": [
             "ddgs>=0.9.0",
@@ -199,6 +205,10 @@ setup(
             # Single provider CLI (Groq only) 
             'ai-helper-single=ai_helper_agent.cli_single:main',
             'ai-helper-groq=ai_helper_agent.cli_single:main',
+            
+            # Internet-enabled CLI (NEW)
+            'ai-helper-internet=ai_helper_agent.cli_internet_single:main',
+            'ai-helper-web=ai_helper_agent.cli_internet_single:main',
             
             # Search-enabled CLIs
             'ai-helper-search=multi_search_cli:main',

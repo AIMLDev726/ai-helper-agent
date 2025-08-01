@@ -6,6 +6,7 @@ Internet-enabled CLI that automatically searches the web when needed
 import os
 import sys
 import argparse
+import time
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
@@ -219,8 +220,8 @@ class InternetSingleProviderCLI:
 - I provide up-to-date answers with web-sourced information
 - I can find examples, tutorials, and best practices from the web
 
-Current workspace: {str(self.workspace_path)}
-Current model: {self.model or 'Unknown'} (GROQ)
+Current workspace: {workspace_path}
+Current model: {model} (GROQ)
 Provider: GROQ (Lightning Fast) + Internet Access
 
 IMPORTANT: When you need current information, documentation, API changes, or solutions to specific problems, I will automatically search the internet to provide you with the most up-to-date and accurate information."""
@@ -246,10 +247,11 @@ IMPORTANT: When you need current information, documentation, API changes, or sol
                 self.session_id
             )
             
-            if search_results and search_results.get('results'):
+            # search_results is Optional[List[SearchResult]], not a dict
+            if search_results and len(search_results) > 0:
                 # Format search results for the AI
                 search_context = "🌐 **INTERNET SEARCH RESULTS:**\n\n"
-                for i, result in enumerate(search_results['results'][:3]):  # Top 3 results
+                for i, result in enumerate(search_results[:3]):  # Top 3 results
                     search_context += f"**{i+1}. {result.title}**\n"
                     search_context += f"URL: {result.url}\n"
                     search_context += f"Summary: {result.snippet}\n\n"
@@ -264,17 +266,25 @@ IMPORTANT: When you need current information, documentation, API changes, or sol
         return None
     
     def handle_command(self, user_input: str) -> str:
-        """Handle user commands with internet search integration"""
+        """Handle user commands with internet search integration and response timing"""
+        start_time = time.time()
+        
         try:
             # Check for special commands
             if user_input.lower() in ['exit', 'quit', 'goodbye']:
                 return "👋 Goodbye! Thanks for using AI Helper Agent with Internet Access!"
             
             if user_input.lower() in ['help', '?']:
-                return self._get_help_text()
+                response = self._get_help_text()
+                elapsed_time = time.time() - start_time
+                print(f"⏱️ Response generated in {elapsed_time:.2f} seconds")
+                return response
             
             if user_input.lower().startswith('internet'):
-                return self._handle_internet_commands(user_input)
+                response = self._handle_internet_commands(user_input)
+                elapsed_time = time.time() - start_time
+                print(f"⏱️ Response generated in {elapsed_time:.2f} seconds")
+                return response
             
             # Get conversation history for context
             history = self.get_session_history(self.session_id)
@@ -297,29 +307,43 @@ IMPORTANT: When you need current information, documentation, API changes, or sol
             if self.streaming_enabled:
                 print("🤖 AI Helper: ", end="", flush=True)
                 
-                # Use simple streaming like the original CLI
+                # Use simple streaming like the original CLI with template variables
                 full_response = ""
                 for chunk in self.conversation_chain.stream(
-                    {"input": enhanced_input},
+                    {
+                        "input": enhanced_input,
+                        "workspace_path": str(self.workspace_path),
+                        "model": self.model
+                    },
                     config={"configurable": {"session_id": self.session_id}}
                 ):
                     if chunk:
                         print(chunk, end="", flush=True)
                         full_response += chunk
                 
+                elapsed_time = time.time() - start_time
                 print()  # New line after streaming
+                print(f"⏱️ Response generated in {elapsed_time:.2f} seconds")
                 return ""  # Response already printed via streaming
             else:
                 # Non-streaming response
                 response = self.conversation_chain.invoke(
-                    {"input": enhanced_input},
+                    {
+                        "input": enhanced_input,
+                        "workspace_path": str(self.workspace_path),
+                        "model": self.model
+                    },
                     config={"configurable": {"session_id": self.session_id}}
                 )
+                elapsed_time = time.time() - start_time
+                print(f"⏱️ Response generated in {elapsed_time:.2f} seconds")
                 return response
                 
         except Exception as e:
+            elapsed_time = time.time() - start_time
             error_msg = f"❌ Error processing request: {e}"
             print(error_msg)
+            print(f"⏱️ Error occurred after {elapsed_time:.2f} seconds")
             return error_msg
     
     def _handle_internet_commands(self, user_input: str) -> str:
@@ -359,9 +383,9 @@ IMPORTANT: When you need current information, documentation, API changes, or sol
                     results = self.internet_manager.search_with_permission(
                         query, user="user", session_id=self.session_id
                     )
-                    if results and results.get('results'):
+                    if results and len(results) > 0:
                         response = f"🔍 **SEARCH RESULTS FOR:** {query}\n\n"
-                        for i, result in enumerate(results['results'][:5]):
+                        for i, result in enumerate(results[:5]):
                             response += f"**{i+1}. {result.title}**\n"
                             response += f"URL: {result.url}\n"
                             response += f"Summary: {result.snippet}\n\n"
