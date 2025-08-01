@@ -250,6 +250,12 @@ pip install -e ".[dev]"
 pytest tests/
 ```
 
+### Images
+
+<img width="1353" height="913" alt="image" src="https://github.com/user-attachments/assets/02fe8234-2291-4fc1-a348-b84050f3f8f6" />
+
+
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
