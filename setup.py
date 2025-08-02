@@ -197,25 +197,28 @@ setup(
     # Console scripts (command-line entry points)
     entry_points={
         'console_scripts': [
+            # CLI Selection Tool
+            'ai-helper-selector=ai_helper_agent.cli.cli_selector:main',
+            
             # Multi-provider CLIs (default)
-            'ai-helper=ai_helper_agent.cli_multi_provider:main',
-            'ai-helper-multi=ai_helper_agent.cli_multi_provider:main',
-            'ai-helper-agent=ai_helper_agent.cli_multi_provider:main',
+            'ai-helper=ai_helper_agent.cli.multi_provider_cli:main',
+            'ai-helper-multi=ai_helper_agent.cli.multi_provider_cli:main',
+            'ai-helper-agent=ai_helper_agent.cli.multi_provider_cli:main',
             
             # Single provider CLI (Groq only) 
-            'ai-helper-single=ai_helper_agent.cli_single:main',
-            'ai-helper-groq=ai_helper_agent.cli_single:main',
+            'ai-helper-single=ai_helper_agent.cli.cli_single:main',
+            'ai-helper-groq=ai_helper_agent.cli.cli_single:main',
             
             # Internet-enabled CLI (NEW)
-            'ai-helper-internet=ai_helper_agent.cli_internet_single:main',
-            'ai-helper-web=ai_helper_agent.cli_internet_single:main',
+            'ai-helper-internet=ai_helper_agent.cli.cli_internet_single:main',
+            'ai-helper-web=ai_helper_agent.cli.cli_internet_single:main',
             
-            # Search-enabled CLIs
-            'ai-helper-search=multi_search_cli:main',
-            'ai-helper-comprehensive=multi_search_comprehensive_cli:main',
+            # Enhanced CLI  
+            'ai-helper-enhanced=ai_helper_agent.cli.enhanced_cli:main',
+            'ai-helper-enhanced-internet=ai_helper_agent.cli.enhanced_internet_cli:main',
             
             # Legacy compatibility
-            'ai_helper_agent=ai_helper_agent.cli_multi_provider:main',
+            'ai_helper_agent=ai_helper_agent.cli.cli:main',
         ],
     },
     

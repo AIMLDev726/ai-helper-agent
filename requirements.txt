@@ -5,6 +5,9 @@
 langchain-groq>=0.1.0
 langchain>=0.1.0
 
+# Security and Encryption
+cryptography>=41.0.0
+
 # Logging and Utilities
 structlog>=23.0.0
 
